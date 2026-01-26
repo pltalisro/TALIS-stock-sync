@@ -1,0 +1,50 @@
+name: Sincronizare Stoc Obsession
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Ruleaza zilnic la ora 06:00 UTC (08:00 sau 09:00 RO)
+  workflow_dispatch: # Permite rularea manuala pentru test
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cod
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Rulare script download
+        env:
+          # Aici legam secretele din Settings de scriptul Python
+          OBSESSION_FTP_HOST: ${{ secrets.OBSESSION_FTP_HOST }}
+          OBSESSION_FTP_USER: ${{ secrets.OBSESSION_FTP_USER }}
+          OBSESSION_FTP_PASSWORD: ${{ secrets.OBSESSION_FTP_PASSWORD }}
+        run: python download_script.py
+
+      - name: Salvare fisier in GitHub
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add stoc_obsession.csv
+          # Verifica daca sunt modificari inainte de a face commit
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update stoc Obsession" && git push)
+
+      - name: Trimite Email la Eroare
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: eroare aplicatie sincronizare stoc Obsession
+          to: contact@talis.ro
+          from: Automatizare Stoc
+          body: Sincronizarea FTP a esuat.
