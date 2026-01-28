@@ -1,0 +1,73 @@
+name: Sincronizare Stoc Obsession
+
+on:
+  schedule:
+    # Ora 05:15 UTC inseamna 07:15 sau 08:15 Romania
+    # Punem un minut ciudat (15) ca sa evitam aglomeratia de la ora fixa
+    - cron: '15 5 * * *'
+  workflow_dispatch: # Buton manual
+
+permissions:
+  contents: write
+
+jobs:
+  update-stock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cod
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Luam tot istoricul pentru a evita erori la diff
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Rulare script download
+        env:
+          OBSESSION_FTP_HOST: ${{ secrets.OBSESSION_FTP_HOST }}
+          OBSESSION_FTP_USER: ${{ secrets.OBSESSION_FTP_USER }}
+          OBSESSION_FTP_PASSWORD: ${{ secrets.OBSESSION_FTP_PASSWORD }}
+        run: python download_script.py
+
+      - name: Verificare si Commit
+        run: |
+          # Verificam daca fisierul exista
+          if [ ! -f stoc_obsession.csv ]; then
+            echo "EROARE: Fisierul csv nu a fost descarcat!"
+            exit 1
+          fi
+
+          # Configuram Git
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          
+          # Adaugam fisierul
+          git add stoc_obsession.csv
+          
+          # Verificam daca sunt modificari reale
+          if git diff --staged --quiet; then
+            echo "Nu exista modificari in stoc. Commit-ul este anulat."
+          else
+            echo "S-au gasit modificari. Se face update..."
+            git commit -m "Update stoc Obsession $(date +'%Y-%m-%d')"
+            git push
+          fi
+
+      - name: Notificare Email la Eroare
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ALERTĂ - Sincronizarea Stoc a Eșuat
+          to: contact@talis.ro
+          from: Automatizare Stoc
+          body: |
+            Salut,
+            
+            Sincronizarea automata a stocului a intampinat o eroare.
+            Verifica logurile aici: https://github.com/${{ github.repository }}/actions
