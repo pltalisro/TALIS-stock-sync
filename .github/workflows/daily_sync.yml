@@ -2,7 +2,7 @@ name: Sincronizare Stoc Obsession
 
 on:
   schedule:
-    - cron: '0 6 * * *' # Ruleaza zilnic la ora 06:00 UTC (08:00 sau 09:00 RO)
+    - cron: '*/15 * * * *' # Ruleaza zilnic la ora 06:00 UTC (08:00 sau 09:00 RO)
   workflow_dispatch: # Permite rularea manuala pentru test
 
 permissions:
