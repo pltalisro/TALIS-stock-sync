@@ -35,14 +35,14 @@ jobs:
 
       - name: Verificare si Commit
         run: |
-          if [ ! -f stoc_actona.xml ]; then
-            echo "EROARE: Fisierul stoc_actona.xml nu a fost descarcat!"
+          if [ ! -f stoc_actona.csv ]; then
+            echo "EROARE: Fisierul stoc_actona.csv nu a fost descarcat!"
             exit 1
           fi
 
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          git add stoc_actona.xml
+          git add stoc_actona.csv
           
           if git diff --staged --quiet; then
             echo "Nu exista modificari la Actona. Nu facem commit."
