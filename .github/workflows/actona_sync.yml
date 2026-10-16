@@ -1,0 +1,53 @@
+name: Sincronizare Stoc Actona
+
+on:
+  schedule:
+    # Ruleaza in fiecare zi la ora 04:30 UTC (06:30 sau 07:30 ora RO)
+    - cron: '30 4 * * *'
+  workflow_dispatch: # Permite rularea manuala
+
+permissions:
+  contents: write
+
+jobs:
+  update-stock-actona:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cod
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalam libraria SFTP
+        run: pip install paramiko
+
+      - name: Rulare script download Actona
+        env:
+          ACTONA_SFTP_HOST: ${{ secrets.ACTONA_SFTP_HOST }}
+          ACTONA_SFTP_USER: ${{ secrets.ACTONA_SFTP_USER }}
+          ACTONA_SFTP_PASS: ${{ secrets.ACTONA_SFTP_PASS }}
+        run: python download_actona.py
+
+      - name: Verificare si Commit
+        run: |
+          if [ ! -f stoc_actona.xml ]; then
+            echo "EROARE: Fisierul stoc_actona.xml nu a fost descarcat!"
+            exit 1
+          fi
+
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add stoc_actona.xml
+          
+          if git diff --staged --quiet; then
+            echo "Nu exista modificari la Actona. Nu facem commit."
+          else
+            echo "Avem fisier nou de la Actona. Salvam in GitHub..."
+            git commit -m "Update stoc Actona $(date +'%Y-%m-%d')"
+            git push
+          fi
