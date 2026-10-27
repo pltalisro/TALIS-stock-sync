@@ -1,0 +1,35 @@
+name: Sincronizare Stoc Unique
+
+on:
+  schedule:
+    - cron: '45 4 * * *' # Ruleaza la 06:45 RO
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Rulare script descarcare
+        run: python download_unique.py
+
+      - name: Salvare in GitHub
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add stoc_unique.csv
+          if git diff --staged --quiet; then
+            echo "Nu sunt modificari."
+          else
+            git commit -m "Update stoc Unique $(date +'%Y-%m-%d')"
+            git push
+          fi
